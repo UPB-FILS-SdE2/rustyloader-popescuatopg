@@ -1,3 +1,10 @@
-# SdE 2 Devoir 0
+# SdE2 Devoir 2 - Micro:bit busybox
 
-Modify `main.py` so that it prints `OK`
+## Description
+
+Le descriptif des devoirs est disponible sur le site de SdE2 [Devoir 2](https://ocw.cs.pub.ro/courses/sde2/teme/tema_fr_2_microbit_busybox)
+
+
+## Solution
+
+TODO Décrivez ici comment avez-vous résolu les devoirs. 
