@@ -1,0 +1,309 @@
+name: Autograding Tests
+'on':
+- workflow_dispatch
+- repository_dispatch
+permissions:
+  checks: write
+  actions: read
+  contents: read
+jobs:
+  run-autograding-tests:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-classroom[bot]'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: build
+      id: build
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: build
+        setup-command: rustup target add i686-unknown-linux-gnu && sudo apt-get -y
+          install gcc-multilib
+        command: cargo install --path .
+        timeout: 10
+    - name: setup
+      id: setup
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: setup
+        setup-command: git clone https://github.com/UPB-FILS-SdE2/devoir-3-tests.git
+        command: cd devoir-3-tests/inputs && make
+        timeout: 10
+    - name: bss code
+      id: bss-code
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: bss code
+        setup-command: cd devoir-3-tests && timeout 5 ./run.sh bss
+        command: cd devoir-3-tests && timeout 5 ./verify.sh bss code
+        timeout: 10
+        max-score: 1
+    - name: bss segements
+      id: bss-segements
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: bss segements
+        setup-command: ''
+        command: cd devoir-3-tests && timeout 5 ./verify.sh bss segments
+        timeout: 10
+        max-score: 3
+    - name: bss out
+      id: bss-out
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: bss out
+        setup-command: ''
+        command: cd devoir-3-tests && timeout 5 ./verify.sh bss out
+        timeout: 10
+        max-score: 6
+    - name: check_exec code
+      id: check_exec-code
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: check_exec code
+        setup-command: cd devoir-3-tests && timeout 5 ./run.sh check_exec
+        command: cd devoir-3-tests && timeout 5 ./verify.sh check_exec code
+        timeout: 10
+        max-score: 1
+    - name: check_exec segments
+      id: check_exec-segments
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: check_exec segments
+        setup-command: ''
+        command: cd devoir-3-tests && timeout 5 ./verify.sh check_exec segments
+        timeout: 10
+        max-score: 3
+    - name: check_exec
+      id: check_exec
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: check_exec
+        setup-command: ''
+        command: cd devoir-3-tests && timeout 5 ./verify.sh check_exec out
+        timeout: 10
+        max-score: 6
+    - name: check_perm code
+      id: check_perm-code
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: check_perm code
+        setup-command: cd devoir-3-tests && timeout 5 ./run.sh check_perm
+        command: cd devoir-3-tests && timeout 5 ./verify.sh check_perm code
+        timeout: 10
+        max-score: 1
+    - name: check_perm segments
+      id: check_perm-segments
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: check_perm segments
+        setup-command: ''
+        command: cd devoir-3-tests && timeout 5 ./verify.sh check_perm segments
+        timeout: 10
+        max-score: 3
+    - name: check_perm out
+      id: check_perm-out
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: check_perm out
+        setup-command: ''
+        command: cd devoir-3-tests && timeout 5 ./verify.sh check_perm out
+        timeout: 10
+        max-score: 6
+    - name: data_bss code
+      id: data_bss-code
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: data_bss code
+        setup-command: cd devoir-3-tests && timeout 5 ./run.sh data_bss
+        command: cd devoir-3-tests && timeout 5 ./verify.sh data_bss code
+        timeout: 10
+        max-score: 1
+    - name: data_bss segments
+      id: data_bss-segments
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: data_bss segments
+        setup-command: ''
+        command: cd devoir-3-tests && timeout 5 ./verify.sh data_bss segments
+        timeout: 10
+        max-score: 3
+    - name: data_bss out
+      id: data_bss-out
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: data_bss out
+        setup-command: ''
+        command: cd devoir-3-tests && timeout 5 ./verify.sh data_bss out
+        timeout: 10
+        max-score: 6
+    - name: hello code
+      id: hello-code
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: hello code
+        setup-command: cd devoir-3-tests && timeout 5 ./run.sh hello
+        command: cd devoir-3-tests && timeout 5 ./verify.sh data_bss code
+        timeout: 10
+        max-score: 1
+    - name: hello segments
+      id: hello-segments
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: hello segments
+        setup-command: ''
+        command: cd devoir-3-tests && timeout 5 ./verify.sh hello segments
+        timeout: 10
+        max-score: 3
+    - name: hello out
+      id: hello-out
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: hello out
+        setup-command: ''
+        command: cd devoir-3-tests && timeout 5 ./verify.sh hello out
+        timeout: 10
+        max-score: 6
+    - name: inv_perm code
+      id: inv_perm-code
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: inv_perm code
+        setup-command: cd devoir-3-tests && timeout 5 ./run.sh inv_perm
+        command: cd devoir-3-tests && timeout 5 ./verify.sh inv_perm code
+        timeout: 10
+        max-score: 1
+    - name: inv_perm segments
+      id: inv_perm-segments
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: inv_perm segments
+        setup-command: ''
+        command: cd devoir-3-tests && timeout 5 ./verify.sh inv_perm segments
+        timeout: 10
+        max-score: 3
+    - name: inv_perm out
+      id: inv_perm-out
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: inv_perm out
+        setup-command: ''
+        command: cd devoir-3-tests && timeout 5 ./verify.sh inv_perm out
+        timeout: 10
+        max-score: 6
+    - name: no_perm code
+      id: no_perm-code
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: no_perm code
+        setup-command: cd devoir-3-tests && timeout 5 ./run.sh no_perm
+        command: cd devoir-3-tests && timeout 5 ./verify.sh no_perm code
+        timeout: 10
+        max-score: 1
+    - name: no_perm segments
+      id: no_perm-segments
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: no_perm segments
+        setup-command: ''
+        command: cd devoir-3-tests && timeout 5 ./verify.sh no_perm segments
+        timeout: 10
+        max-score: 3
+    - name: no_perm out
+      id: no_perm-out
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: no_perm out
+        setup-command: ''
+        command: cd devoir-3-tests && timeout 5 ./verify.sh no_perm out
+        timeout: 10
+        max-score: 6
+    - name: qsort code
+      id: qsort-code
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: qsort code
+        setup-command: cd devoir-3-tests && timeout 5 ./run.sh qsort
+        command: cd devoir-3-tests && timeout 5 ./verify.sh qsort code
+        timeout: 10
+        max-score: 2
+    - name: qsort segments
+      id: qsort-segments
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: qsort segments
+        setup-command: ''
+        command: cd devoir-3-tests && timeout 5 ./verify.sh qsort segments
+        timeout: 10
+        max-score: 6
+    - name: qsort out
+      id: qsort-out
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: qsort out
+        setup-command: ''
+        command: cd devoir-3-tests && timeout 5 ./verify.sh qsort out
+        timeout: 10
+        max-score: 12
+    - name: sum code
+      id: sum-code
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: sum code
+        setup-command: cd devoir-3-tests && timeout 5 ./run.sh sum
+        command: cd devoir-3-tests && timeout 5 ./verify.sh sum code
+        timeout: 10
+        max-score: 1
+    - name: sum segments
+      id: sum-segments
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: sum segments
+        setup-command: ''
+        command: cd devoir-3-tests && timeout 5 ./verify.sh sum segments
+        timeout: 10
+        max-score: 3
+    - name: sum out
+      id: sum-out
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: sum out
+        setup-command: ''
+        command: cd devoir-3-tests && timeout 5 ./verify.sh sum out
+        timeout: 10
+        max-score: 6
+    - name: Autograding Reporter
+      uses: classroom-resources/autograding-grading-reporter@v1
+      env:
+        BUILD_RESULTS: "${{steps.build.outputs.result}}"
+        SETUP_RESULTS: "${{steps.setup.outputs.result}}"
+        BSS-CODE_RESULTS: "${{steps.bss-code.outputs.result}}"
+        BSS-SEGEMENTS_RESULTS: "${{steps.bss-segements.outputs.result}}"
+        BSS-OUT_RESULTS: "${{steps.bss-out.outputs.result}}"
+        CHECK_EXEC-CODE_RESULTS: "${{steps.check_exec-code.outputs.result}}"
+        CHECK_EXEC-SEGMENTS_RESULTS: "${{steps.check_exec-segments.outputs.result}}"
+        CHECK_EXEC_RESULTS: "${{steps.check_exec.outputs.result}}"
+        CHECK_PERM-CODE_RESULTS: "${{steps.check_perm-code.outputs.result}}"
+        CHECK_PERM-SEGMENTS_RESULTS: "${{steps.check_perm-segments.outputs.result}}"
+        CHECK_PERM-OUT_RESULTS: "${{steps.check_perm-out.outputs.result}}"
+        DATA_BSS-CODE_RESULTS: "${{steps.data_bss-code.outputs.result}}"
+        DATA_BSS-SEGMENTS_RESULTS: "${{steps.data_bss-segments.outputs.result}}"
+        DATA_BSS-OUT_RESULTS: "${{steps.data_bss-out.outputs.result}}"
+        HELLO-CODE_RESULTS: "${{steps.hello-code.outputs.result}}"
+        HELLO-SEGMENTS_RESULTS: "${{steps.hello-segments.outputs.result}}"
+        HELLO-OUT_RESULTS: "${{steps.hello-out.outputs.result}}"
+        INV_PERM-CODE_RESULTS: "${{steps.inv_perm-code.outputs.result}}"
+        INV_PERM-SEGMENTS_RESULTS: "${{steps.inv_perm-segments.outputs.result}}"
+        INV_PERM-OUT_RESULTS: "${{steps.inv_perm-out.outputs.result}}"
+        NO_PERM-CODE_RESULTS: "${{steps.no_perm-code.outputs.result}}"
+        NO_PERM-SEGMENTS_RESULTS: "${{steps.no_perm-segments.outputs.result}}"
+        NO_PERM-OUT_RESULTS: "${{steps.no_perm-out.outputs.result}}"
+        QSORT-CODE_RESULTS: "${{steps.qsort-code.outputs.result}}"
+        QSORT-SEGMENTS_RESULTS: "${{steps.qsort-segments.outputs.result}}"
+        QSORT-OUT_RESULTS: "${{steps.qsort-out.outputs.result}}"
+        SUM-CODE_RESULTS: "${{steps.sum-code.outputs.result}}"
+        SUM-SEGMENTS_RESULTS: "${{steps.sum-segments.outputs.result}}"
+        SUM-OUT_RESULTS: "${{steps.sum-out.outputs.result}}"
+      with:
+        runners: build,setup,bss-code,bss-segements,bss-out,check_exec-code,check_exec-segments,check_exec,check_perm-code,check_perm-segments,check_perm-out,data_bss-code,data_bss-segments,data_bss-out,hello-code,hello-segments,hello-out,inv_perm-code,inv_perm-segments,inv_perm-out,no_perm-code,no_perm-segments,no_perm-out,qsort-code,qsort-segments,qsort-out,sum-code,sum-segments,sum-out
