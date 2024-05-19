@@ -18,8 +18,8 @@ jobs:
       uses: classroom-resources/autograding-command-grader@v1
       with:
         test-name: build
-        setup-command: rustup target add i686-unknown-linux-gnu && sudo apt-get -y
-          install gcc-multilib
+        setup-command: rustup target add i686-unknown-linux-gnu && sudo apt-get update
+          && sudo apt-get -y install gcc-multilib
         command: cargo install --path .
         timeout: 10
     - name: setup
