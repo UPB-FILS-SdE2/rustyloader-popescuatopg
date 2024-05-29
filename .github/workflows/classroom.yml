@@ -35,7 +35,7 @@ jobs:
       uses: classroom-resources/autograding-command-grader@v1
       with:
         test-name: bss code
-        setup-command: cd /devoir-4-tests && timeout 5 ./run.sh bss
+        setup-command: cd devoir-4-tests && timeout 5 ./run.sh bss
         command: cd devoir-4-tests && timeout 5 ./verify.sh bss code
         timeout: 10
         max-score: 1
