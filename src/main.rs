@@ -200,8 +200,8 @@ fn exec(filename: &str) -> Result<(), Box<dyn Error>> {
     // for section in 
 
     // // determine entry point
-    eprintln!("Entry point 0x{:x}", entry_point);
-    eprintln!("Base address 0x{:x}", base_address);
+    eprintln!("Entry point {:x}", entry_point);
+    eprintln!("Base address {:x}", base_address);
 
     // // register SIGSEGV handler
     let handler = SigHandler::SigAction(sigsegv_handler);
