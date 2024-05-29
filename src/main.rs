@@ -141,8 +141,8 @@ fn exec(filename: &str) -> Result<(), Box<dyn Error>> {
                 p_memsz,
                 ProtFlags::PROT_WRITE,
                 MapFlags::MAP_PRIVATE | MapFlags::MAP_ANONYMOUS | MapFlags::MAP_FIXED,
-                -1, //fd,
-                0,  //actual_offset as i32, //p_offset as i32,
+                -1,
+                0,
             )
         };
 
@@ -154,6 +154,8 @@ fn exec(filename: &str) -> Result<(), Box<dyn Error>> {
         
         let p = p.unwrap_or_else(|_| panic!("couldn't allocate pointer"));
 
+        // println!("\n\nfilesz: {}\nmemsz: {}\n\n", p_filesz, p_memsz);
+        
         file.seek(SeekFrom::Start(p_offset as u64)).unwrap_or_else(|e| panic!("can't navigate in the file at the specified offset"));
         let mut segment = vec![0; p_filesz];
         file.read_exact(&mut segment).unwrap_or_else(|e| panic!("can't read segment data"));
@@ -188,10 +190,22 @@ fn exec(filename: &str) -> Result<(), Box<dyn Error>> {
       };
 
       match neros_section.name.as_str() {
-        ".text" | ".data" | ".data1" => {
+        ".text" | ".data" | ".data1" | ".rodata" => {
           load_sections.push(neros_section);
         }
-        ".bss" => unimplemented!(),
+        ".bss" => {
+          load_sections.push(neros_section);
+          // okay so here we got 1 thing that's diff from all the other sections
+          // bss is for unintialized global variables
+          // so that means they are initialized to their default (which in pure binary is 0)
+
+          // now, to save space, we are not saving the 0's in the file itself
+          // so p_memsz is gonna be bigger (well, it's gonna be different than 0)
+          // all whilst p_filesz is gonna be 0
+
+          // so, keeping this in mind, when you do try to copy stuff to it from file
+          // good luck
+        },
         _ => {}
       }
     }
