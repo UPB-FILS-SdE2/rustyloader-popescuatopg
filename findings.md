@@ -112,3 +112,186 @@ p_type (ProgramHeader32 Type) = 0x6474e552 => https://refspecs.linuxfoundation.o
 
 
 how tf does p_offset and p_vaddr differ and what do they specifically mean? => https://stackoverflow.com/questions/52533193/how-to-understand-the-difference-between-offset-and-viraddr-in-program-headers-i
+
+
+Let's take a look at how linux plays with elfs!
+https://github.dev/torvalds/linux/blob/master/fs/binfmt_elf.c
+
+
+```c
+/* ELF_EXEC_PAGESIZE for x86 is 4096, see https://github.com/torvalds/linux/tree/master/arch/x86/include/asm/elf.h */
+#define ELF_EXEC_PAGESIZE 4096
+
+#if ELF_EXEC_PAGESIZE > PAGE_SIZE
+#define ELF_MIN_ALIGN	ELF_EXEC_PAGESIZE
+#else
+#define ELF_MIN_ALIGN	PAGE_SIZE
+#endif
+
+
+#define ELF_PAGESTART(_v) ((_v) & ~(int)(ELF_MIN_ALIGN-1))
+
+#ifdef CONFIG_USELIB
+/* This is really simpleminded and specialized - we are loading an
+   a.out library that is given an ELF header. */
+static int load_elf_library(struct file *file)
+{
+	struct elf_phdr *elf_phdata;
+	struct elf_phdr *eppnt;
+	int retval, error, i, j;
+	struct elfhdr elf_ex;
+
+	error = -ENOEXEC;
+	retval = elf_read(file, &elf_ex, sizeof(elf_ex), 0);
+	if (retval < 0)
+		goto out;
+
+	if (memcmp(elf_ex.e_ident, ELFMAG, SELFMAG) != 0)
+		goto out;
+
+	/* First of all, some simple consistency checks */
+	if (elf_ex.e_type != ET_EXEC || elf_ex.e_phnum > 2 ||
+	    !elf_check_arch(&elf_ex) || !file->f_op->mmap)
+		goto out;
+	if (elf_check_fdpic(&elf_ex))
+		goto out;
+
+	/* Now read in all of the header information */
+
+	j = sizeof(struct elf_phdr) * elf_ex.e_phnum;
+	/* j < ELF_MIN_ALIGN because elf_ex.e_phnum <= 2 */
+
+	error = -ENOMEM;
+	elf_phdata = kmalloc(j, GFP_KERNEL);
+	if (!elf_phdata)
+		goto out;
+
+	eppnt = elf_phdata;
+	error = -ENOEXEC;
+	retval = elf_read(file, eppnt, j, elf_ex.e_phoff);
+	if (retval < 0)
+		goto out_free_ph;
+
+	for (j = 0, i = 0; i<elf_ex.e_phnum; i++)
+		if ((eppnt + i)->p_type == PT_LOAD)
+			j++;
+	if (j != 1)
+		goto out_free_ph;
+
+	while (eppnt->p_type != PT_LOAD)
+		eppnt++;
+
+	/* Now use mmap to map the library into memory. */
+	error = elf_load(file, ELF_PAGESTART(eppnt->p_vaddr),
+			eppnt,
+			PROT_READ | PROT_WRITE | PROT_EXEC,
+			MAP_FIXED_NOREPLACE | MAP_PRIVATE,
+			0);
+
+	if (error != ELF_PAGESTART(eppnt->p_vaddr))
+		goto out_free_ph;
+
+	error = 0;
+
+out_free_ph:
+	kfree(elf_phdata);
+out:
+	return error;
+}
+#endif /* #ifdef CONFIG_USELIB */
+
+/*
+ * Map "eppnt->p_filesz" bytes from "filep" offset "eppnt->p_offset"
+ * into memory at "addr". Memory from "p_filesz" through "p_memsz"
+ * rounded up to the next page is zeroed.
+ */
+static unsigned long elf_load(struct file *filep, unsigned long addr,
+		const struct elf_phdr *eppnt, int prot, int type,
+		unsigned long total_size)
+{
+	unsigned long zero_start, zero_end;
+	unsigned long map_addr;
+
+	if (eppnt->p_filesz) {
+		map_addr = elf_map(filep, addr, eppnt, prot, type, total_size);
+		if (BAD_ADDR(map_addr))
+			return map_addr;
+		if (eppnt->p_memsz > eppnt->p_filesz) {
+			zero_start = map_addr + ELF_PAGEOFFSET(eppnt->p_vaddr) +
+				eppnt->p_filesz;
+			zero_end = map_addr + ELF_PAGEOFFSET(eppnt->p_vaddr) +
+				eppnt->p_memsz;
+
+			/*
+			 * Zero the end of the last mapped page but ignore
+			 * any errors if the segment isn't writable.
+			 */
+			if (padzero(zero_start) && (prot & PROT_WRITE))
+				return -EFAULT;
+		}
+	} else {
+		map_addr = zero_start = ELF_PAGESTART(addr);
+		zero_end = zero_start + ELF_PAGEOFFSET(eppnt->p_vaddr) +
+			eppnt->p_memsz;
+	}
+	if (eppnt->p_memsz > eppnt->p_filesz) {
+		/*
+		 * Map the last of the segment.
+		 * If the header is requesting these pages to be
+		 * executable, honour that (ppc32 needs this).
+		 */
+		int error;
+
+		zero_start = ELF_PAGEALIGN(zero_start);
+		zero_end = ELF_PAGEALIGN(zero_end);
+
+		error = vm_brk_flags(zero_start, zero_end - zero_start,
+				     prot & PROT_EXEC ? VM_EXEC : 0);
+		if (error)
+			map_addr = error;
+	}
+	return map_addr;
+}
+
+
+/*
+ * Map "eppnt->p_filesz" bytes from "filep" offset "eppnt->p_offset"
+ * into memory at "addr". (Note that p_filesz is rounded up to the
+ * next page, so any extra bytes from the file must be wiped.)
+ */
+static unsigned long elf_map(struct file *filep, unsigned long addr,
+		const struct elf_phdr *eppnt, int prot, int type,
+		unsigned long total_size)
+{
+	unsigned long map_addr;
+	unsigned long size = eppnt->p_filesz + ELF_PAGEOFFSET(eppnt->p_vaddr);
+	unsigned long off = eppnt->p_offset - ELF_PAGEOFFSET(eppnt->p_vaddr);
+	addr = ELF_PAGESTART(addr);
+	size = ELF_PAGEALIGN(size);
+
+	/* mmap() will return -EINVAL if given a zero size, but a
+	 * segment with zero filesize is perfectly valid */
+	if (!size)
+		return addr;
+
+	/*
+	* total_size is the size of the ELF (interpreter) image.
+	* The _first_ mmap needs to know the full size, otherwise
+	* randomization might put this image into an overlapping
+	* position with the ELF binary image. (since size < total_size)
+	* So we first map the 'big' image - and unmap the remainder at
+	* the end. (which unmap is needed for ELF images with holes.)
+	*/
+	if (total_size) {
+		total_size = ELF_PAGEALIGN(total_size);
+		map_addr = vm_mmap(filep, addr, total_size, prot, type, off);
+		if (!BAD_ADDR(map_addr))
+			vm_munmap(map_addr+size, total_size-size);
+	} else
+		map_addr = vm_mmap(filep, addr, size, prot, type, off);
+
+  // ...
+
+	return(map_addr);
+}
+```
