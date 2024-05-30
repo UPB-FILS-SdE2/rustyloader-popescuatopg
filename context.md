@@ -7,3 +7,4 @@ WE ARE HERE
 |
 V
 1. I copied memory for each LOAD segment section in the mapped pages
+-
